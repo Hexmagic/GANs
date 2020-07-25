@@ -23,7 +23,7 @@ def to_img(x):
     return out
 
 
-batch_size = 256
+batch_size = 64
 num_epoch = 1000
 z_dimension = 49
 img_transform = transforms.Compose([
