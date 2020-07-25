@@ -21,7 +21,7 @@ def to_img(x):
 
 
 batch_size = 256
-num_epoch = 100
+num_epoch = 1000
 z_dimension = 49
 img_transform = transforms.Compose([
     transforms.ToTensor(),
@@ -42,9 +42,11 @@ g_optimizer = torch.optim.Adam(G.parameters(), lr=0.0003)
 
 # train
 for epoch in range(100):
-    bar = tqdm(enumerate(dataloader),dynamic_ncols=True)
-    bar.set_postfix_str(f'{epoch}/{num_epoch}')
-    for i, (img, _) in bar:
+    bar = tqdm(dataloader, dynamic_ncols=True)
+    bar.set_description_str(f'{epoch}/{num_epoch}')
+    i = 0
+    for (img, _) in bar:
+        i += 1
         num_img = img.size(0)
         # =================train discriminator
         real_img = Variable(img).cuda()
@@ -82,11 +84,11 @@ for epoch in range(100):
         g_optimizer.step()
 
         if (i + 1) % 100 == 0:
-            bar.set_description_str('d_loss: {:.6f}, g_loss: {:.6f} '
-                                    'D real: {:.6f}, D fake: {:.6f}'.format(
-                                        d_loss.item(), g_loss.item(),
-                                        real_scores.data.mean(),
-                                        fake_scores.data.mean()))
+            bar.set_postfix_str('d_loss: {:.6f}, g_loss: {:.6f} '
+                                'D real: {:.6f}, D fake: {:.6f}'.format(
+                                    d_loss.item(), g_loss.item(),
+                                    real_scores.data.mean(),
+                                    fake_scores.data.mean()))
     if epoch == 0:
         real_images = to_img(real_img.cpu().data)
         save_image(real_images, './dc_img/real_images.png')
