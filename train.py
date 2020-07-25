@@ -42,7 +42,7 @@ g_optimizer = torch.optim.Adam(G.parameters(), lr=0.0003)
 
 # train
 for epoch in range(100):
-    bar = tqdm(enumerate(dataloader))
+    bar = tqdm(enumerate(dataloader),dynamic_ncols=True)
     bar.set_postfix_str(f'{epoch}/{num_epoch}')
     for i, (img, _) in bar:
         num_img = img.size(0)
