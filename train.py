@@ -89,7 +89,7 @@ for epoch in range(num_epoch):
         g_loss.backward()
         g_optimizer.step()
 
-        if (i + 1) % 100 == 0:
+        if (i + 1) % 2 == 0:
             bar.set_postfix_str('d_loss: {:.6f}, g_loss: {:.6f} '
                                 'D real: {:.6f}, D fake: {:.6f}'.format(
                                     d_loss.item(), g_loss.item(),
