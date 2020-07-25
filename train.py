@@ -21,13 +21,13 @@ def to_img(x):
 
 batch_size = 256
 num_epoch = 100
-
+z_dimension = 49
 img_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
 ])
 
-dataset = ImageFolder('C:\\Users\\Mix\\Downloads\\data',transform=img_transform)
+dataset = ImageFolder('/content/data',transform=img_transform)
 
 dataloader = DataLoader(dataset,
                         batch_size=1,
