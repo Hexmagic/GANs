@@ -27,7 +27,7 @@ img_transform = transforms.Compose([
     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
 ])
 
-dataset = ImageFolder('C:\\Users\\Mix\\Downloads\\data',target_transform=img_transform)
+dataset = ImageFolder('C:\\Users\\Mix\\Downloads\\data',transform=img_transform)
 
 dataloader = DataLoader(dataset,
                         batch_size=1,
