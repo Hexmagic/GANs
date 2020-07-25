@@ -42,7 +42,7 @@ class Generator(nn.Module):
     def __init__(self, input_size, num_feature=96 * 96 * 3 * 4):
         super(Generator, self).__init__()
         self.fc = nn.Linear(input_size, num_feature)  # batch, 3136=1x56x56
-        self.br = nn.Sequential(nn.BatchNorm2d(1), nn.ReLU(True))
+        self.br = nn.Sequential(nn.BatchNorm2d(3), nn.ReLU(True))
         self.downsample1 = nn.Sequential(
             nn.Conv2d(3, 50, 3, stride=1, padding=1),  # batch,50,96*2, 96*2
             nn.BatchNorm2d(50),
