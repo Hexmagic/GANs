@@ -12,6 +12,9 @@ from GAN.model import Discriminator, Generator
 if not os.path.exists('./dc_img'):
     os.mkdir('./dc_img')
 
+torch.backends.cudnn.enabled = True
+torch.backends.cudnn.benchmark = True
+
 
 def to_img(x):
     out = 0.5 * (x + 1)
@@ -30,7 +33,10 @@ img_transform = transforms.Compose([
 
 dataset = ImageFolder('/content/data', transform=img_transform)
 
-dataloader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=4)
+dataloader = DataLoader(dataset,
+                        batch_size=batch_size,
+                        shuffle=True,
+                        num_workers=8)
 
 D = Discriminator().cuda()  # discriminator model
 G = Generator(z_dimension).cuda()  # generator model
