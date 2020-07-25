@@ -35,7 +35,7 @@ dataloader = DataLoader(dataset,
                         num_workers=4)
 
 D = Discriminator().cuda()  # discriminator model
-G = Generator().cuda()  # generator model
+G = Generator(z_dimension).cuda()  # generator model
 
 criterion = nn.BCELoss()  # binary cross entropy
 

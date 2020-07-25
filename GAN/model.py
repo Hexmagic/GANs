@@ -8,7 +8,7 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
         self.conv1 = nn.Sequential(
-            nn.Conv2d(1, 32, 5, padding=2),  # batch, 32, 96
+            nn.Conv2d(3, 32, 5, padding=2),  # batch, 32, 96
             nn.LeakyReLU(0.2, True),
             nn.AvgPool2d(2, stride=2),  # batch, 32, 48
         )
