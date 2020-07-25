@@ -4,9 +4,9 @@ import torch
 from torch.nn import *
 
 
-class discriminator(nn.Module):
+class Discriminator(nn.Module):
     def __init__(self):
-        super(discriminator, self).__init__()
+        super(Discriminator, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(1, 32, 5, padding=2),  # batch, 32, 96
             nn.LeakyReLU(0.2, True),
@@ -38,9 +38,9 @@ class discriminator(nn.Module):
         return x
 
 
-class generator(nn.Module):
+class Generator(nn.Module):
     def __init__(self, input_size, num_feature=96 * 96 * 3 * 4):
-        super(generator, self).__init__()
+        super(Generator, self).__init__()
         self.fc = nn.Linear(input_size, num_feature)  # batch, 3136=1x56x56
         self.br = nn.Sequential(nn.BatchNorm2d(1), nn.ReLU(True))
         self.downsample1 = nn.Sequential(
