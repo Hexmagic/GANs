@@ -47,7 +47,7 @@ d_optimizer = torch.optim.Adam(D.parameters(), lr=0.0003)
 g_optimizer = torch.optim.Adam(G.parameters(), lr=0.0003)
 
 # train
-for epoch in range(100):
+for epoch in range(num_epoch):
     bar = tqdm(dataloader, dynamic_ncols=True)
     bar.set_description_str(f'{epoch}/{num_epoch}')
     i = 0
