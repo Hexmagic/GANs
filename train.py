@@ -19,7 +19,7 @@ torch.backends.cudnn.benchmark = True
 def to_img(x):
     out = 0.5 * (x + 1)
     out = out.clamp(0, 1)
-    out = out.view(-1, 1, 28, 28)
+    out = out.view(-1, 3, 96, 96)
     return out
 
 
