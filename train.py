@@ -7,6 +7,7 @@ from torchvision import datasets
 from torchvision.datasets import ImageFolder
 from torchvision.utils import save_image
 import os
+from tqdm import tqdm
 from GAN.model import Discriminator, Generator
 if not os.path.exists('./dc_img'):
     os.mkdir('./dc_img')
@@ -27,12 +28,9 @@ img_transform = transforms.Compose([
     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
 ])
 
-dataset = ImageFolder('/content/data',transform=img_transform)
+dataset = ImageFolder('/content/data', transform=img_transform)
 
-dataloader = DataLoader(dataset,
-                        batch_size=1,
-                        shuffle=True,
-                        num_workers=4)
+dataloader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=4)
 
 D = Discriminator().cuda()  # discriminator model
 G = Generator(z_dimension).cuda()  # generator model
@@ -44,7 +42,9 @@ g_optimizer = torch.optim.Adam(G.parameters(), lr=0.0003)
 
 # train
 for epoch in range(100):
-    for i, (img, _) in enumerate(dataloader):
+    bar = tqdm(enumerate(dataloader))
+    bar.set_postfix_str(f'{epoch}/{num_epoch}')
+    for i, (img, _) in bar:
         num_img = img.size(0)
         # =================train discriminator
         real_img = Variable(img).cuda()
@@ -82,10 +82,11 @@ for epoch in range(100):
         g_optimizer.step()
 
         if (i + 1) % 100 == 0:
-            print('Epoch [{}/{}], d_loss: {:.6f}, g_loss: {:.6f} '
-                  'D real: {:.6f}, D fake: {:.6f}'.format(
-                      epoch, num_epoch, d_loss.item(), g_loss.item(),
-                      real_scores.data.mean(), fake_scores.data.mean()))
+            bar.set_description_str('d_loss: {:.6f}, g_loss: {:.6f} '
+                                    'D real: {:.6f}, D fake: {:.6f}'.format(
+                                        d_loss.item(), g_loss.item(),
+                                        real_scores.data.mean(),
+                                        fake_scores.data.mean()))
     if epoch == 0:
         real_images = to_img(real_img.cpu().data)
         save_image(real_images, './dc_img/real_images.png')
