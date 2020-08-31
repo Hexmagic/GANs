@@ -1,106 +1,155 @@
+import argparse
+import os
+
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
+import torch.optim as optim
+import torchvision.utils as vutils
 from torch.utils.data import DataLoader
-from torchvision import transforms
-from torchvision import datasets
+from torchvision import datasets, transforms
 from torchvision.datasets import ImageFolder
-from torchvision.utils import save_image
-import os
-from tqdm import tqdm
-from GAN.model import Discriminator, Generator
-if not os.path.exists('./dc_img'):
-    os.mkdir('./dc_img')
 
-torch.backends.cudnn.enabled = True
-torch.backends.cudnn.benchmark = True
+from model.model import DCDiscriminator, DCGenerator
 
 
-def to_img(x):
-    out = 0.5 * (x + 1)
-    out = out.clamp(0, 1)
-    out = out.view(-1, 3, 96, 96)
-    return out
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train GAN model")
+    parser.add_argument('--save_dir', help='the dir to save logs and models')   
+    parser.add_argument('--batch_size',type=int,default=64)
+    parser.add_argument('--ngpus', type=int, default=1)
+    args = parser.parse_args()
+    return args
 
 
-batch_size = 64
-num_epoch = 1000
-z_dimension = 49
-img_transform = transforms.Compose([
+
+def normal_weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+def main():
+    args = parse_args()
+    if not os.path.exists(args.save_dir):
+        os.mkdir(args.save_dir)
+    device = torch.device("cuda:0" if (
+        torch.cuda.is_available() and args.ngpus > 0) else "cpu")
+
+    # model
+    G = dict(input_dim=100, output_dim=3, num_filters=[512, 256, 128, 64])
+
+    # Discriminator
+    D = dict(input_dim=3, output_dim=1, num_filters=[64, 128, 256, 512])
+
+    img_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-])
+    ])
+    dataset = ImageFolder('/content/data', transform=img_transform)
 
-dataset = ImageFolder('/content/data', transform=img_transform)
-
-dataloader = DataLoader(dataset,
-                        batch_size=batch_size,
+    dataloader = DataLoader(dataset,
+                        batch_size=args.batch_size,
                         shuffle=True,
                         num_workers=8)
+    # train setting
+    num_epochs = 10
+    lr = 2e-4
+    betas = (0.5, 0.999)
+    batch_size = 128
+    image_size = 64
 
-D = Discriminator().cuda()  # discriminator model
-G = Generator(z_dimension).cuda()  # generator model
+    G = DCGenerator(G['input_dim'], G['num_filters'],
+                    G['output_dim']).to(device)
+    G.apply(normal_weights_init)
+    D = DCDiscriminator(D['input_dim'], D['num_filters'],
+                        D['output_dim']).to(device)
+    D.apply(normal_weights_init)
+    if (device.type == 'cuda') and (args.ngpus > 1):
+        G = nn.DataParallel(G, list(range(args.ngpus)))
+        D = nn.DataParallel(D, list(range(args.ngpus)))
 
-criterion = nn.BCELoss()  # binary cross entropy
+    fixed_noise = torch.randn(64, G['input_dim'], 1, 1, device=device)
+    real_label = 1
+    fake_label = 0
 
-d_optimizer = torch.optim.Adam(D.parameters(), lr=0.0003)
-g_optimizer = torch.optim.Adam(G.parameters(), lr=0.0003)
+    # loss and optimizer
+    criterion = nn.BCELoss()
+    optimizerG = optim.Adam(G.parameters(), lr=lr, betas=betas)
+    optimizerD = optim.Adam(D.parameters(), lr=lr, betas=betas)
 
-# train
-for epoch in range(num_epoch):
-    bar = tqdm(dataloader, dynamic_ncols=True)
-    bar.set_description_str(f'{epoch}/{num_epoch}')
-    i = 0
-    for (img, _) in bar:
-        i += 1
-        num_img = img.size(0)
-        # =================train discriminator
-        real_img = Variable(img).cuda()
-        real_label = Variable(torch.ones(num_img)).cuda()
-        fake_label = Variable(torch.zeros(num_img)).cuda()
+    # log
+    img_list = []
+    G_losses = []
+    D_losses = []
 
-        # compute loss of real_img
-        real_out = D(real_img)
-        d_loss_real = criterion(real_out, real_label)
-        real_scores = real_out  # closer to 1 means better
+    # Train
+    print("Starting Training Loop...")
+    for epoch in range(num_epochs):
+        for i, data in enumerate(dataloader, 0):
+            D.zero_grad()
+            real = data[0].to(device)
+            bs = real.size(0)
 
-        # compute loss of fake_img
-        z = Variable(torch.randn(num_img, z_dimension)).cuda()
-        fake_img = G(z)
-        fake_out = D(fake_img)
-        d_loss_fake = criterion(fake_out, fake_label)
-        fake_scores = fake_out  # closer to 0 means better
+            # train D
+            # Compute loss of true images, label is 1
+            label = torch.full((bs, ), real_label, device=device)
+            output = D(real).view(-1)
+            errD_real = criterion(output, label)
+            errD_real.backward()
+            D_x = output.mean().item()
 
-        # bp and optimize
-        d_loss = d_loss_real + d_loss_fake
-        d_optimizer.zero_grad()
-        d_loss.backward()
-        d_optimizer.step()
+            # Compute loss of fake images, label is 0
+            noise = torch.randn(bs, G['input_dim'], 1, 1, device=device)
+            fake = G(noise)
+            label.fill_(fake_label)
+            output = D(fake.detach()).view(-1)
+            errD_fake = criterion(output, label)
+            errD_fake.backward()
 
-        # ===============train generator
-        # compute loss of fake_img
-        z = Variable(torch.randn(num_img, z_dimension)).cuda()
-        fake_img = G(z)
-        output = D(fake_img)
-        g_loss = criterion(output, real_label)
+            D_G_z1 = output.mean().item()
+            errD = errD_fake + errD_real
+            optimizerD.step()
 
-        # bp and optimize
-        g_optimizer.zero_grad()
-        g_loss.backward()
-        g_optimizer.step()
+            # train G
+            # The purpose of the generator is to make the generated picture more realistic
+            # label is 1
+            G.zero_grad()
+            label.fill_(real_label)
+            output = D(fake).view(-1)
+            errG = criterion(output, label)
+            errG.backward()
 
-        if (i + 1) % 2 == 0:
-            bar.set_postfix_str('d_loss: {:.6f}, g_loss: {:.6f} '
-                                'D real: {:.6f}, D fake: {:.6f}'.format(
-                                    d_loss.item(), g_loss.item(),
-                                    real_scores.data.mean(),
-                                    fake_scores.data.mean()))
-    if epoch == 0:
-        real_images = to_img(real_img.cpu().data)
-        save_image(real_images, './dc_img/real_images.png')
+            D_G_z2 = output.mean().item()
+            optimizerG.step()
 
-    fake_images = to_img(fake_img.cpu().data)
-    save_image(fake_images, './dc_img/fake_images-{}.png'.format(epoch + 1))
+            if i % 50 == 0:
+                print(
+                    '[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+                    % (epoch, num_epochs, i, len(dataloader), errD.item(),
+                       errG.item(), D_x, D_G_z1, D_G_z2))
 
-torch.save(G.state_dict(), './generator.pth')
-torch.save(D.state_dict(), './discriminator.pth')
+            # Save Losses for plotting later
+            G_losses.append(errG.item())
+            D_losses.append(errD.item())
+
+            # if (iters % 500 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
+            # iters += 1
+
+        torch.save(G.state_dict(),
+                   os.path.join(args.save_dir, "epoch_%d_G.pth" % epoch))
+        torch.save(D.state_dict(),
+                   os.path.join(args.save_dir, "epoch_%d_D.pth" % epoch))
+        with torch.no_grad():
+            fake = G(fixed_noise).detach().cpu()
+        img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
+
+    # plot_loss(G_losses, D_losses, args.save_dir)
+    # plot_results(img_list, next(iter(dataloader))[0].to(device), args.save_dir)
+
+
+if __name__ == '__main__':
+    main()
