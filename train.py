@@ -40,10 +40,10 @@ def main():
         torch.cuda.is_available() and args.ngpus > 0) else "cpu")
 
     # model
-    G = dict(input_dim=100, output_dim=3, num_filters=[512, 256, 128, 64])
+    Gconfig = dict(input_dim=100, output_dim=3, num_filters=[512, 256, 128, 64])
 
     # Discriminator
-    D = dict(input_dim=3, output_dim=1, num_filters=[64, 128, 256, 512])
+    Dconfig = dict(input_dim=3, output_dim=1, num_filters=[64, 128, 256, 512])
 
     img_transform = transforms.Compose([
     transforms.ToTensor(),
@@ -62,17 +62,17 @@ def main():
     batch_size = 128
     image_size = 64
 
-    G = DCGenerator(G['input_dim'], G['num_filters'],
-                    G['output_dim']).to(device)
+    G = DCGenerator(Gconfig['input_dim'], Gconfig['num_filters'],
+                    Gconfig['output_dim']).to(device)
     G.apply(normal_weights_init)
-    D = DCDiscriminator(D['input_dim'], D['num_filters'],
-                        D['output_dim']).to(device)
+    D = DCDiscriminator(Dconfig['input_dim'], Dconfig['num_filters'],
+                        Dconfig['output_dim']).to(device)
     D.apply(normal_weights_init)
     if (device.type == 'cuda') and (args.ngpus > 1):
         G = nn.DataParallel(G, list(range(args.ngpus)))
         D = nn.DataParallel(D, list(range(args.ngpus)))
 
-    fixed_noise = torch.randn(64, G['input_dim'], 1, 1, device=device)
+    fixed_noise = torch.randn(64, Gconfig['input_dim'], 1, 1, device=device)
     real_label = 1
     fake_label = 0
 
@@ -103,7 +103,7 @@ def main():
             D_x = output.mean().item()
 
             # Compute loss of fake images, label is 0
-            noise = torch.randn(bs, G['input_dim'], 1, 1, device=device)
+            noise = torch.randn(bs, Gconfig['input_dim'], 1, 1, device=device)
             fake = G(noise)
             label.fill_(fake_label)
             output = D(fake.detach()).view(-1)
