@@ -39,12 +39,14 @@ class DCDiscriminator(nn.Module):
                                          nn.LeakyReLU(0.2, inplace=True))
 
         self.output_layer = nn.Sequential(
+            #nn.Conv2d(num_filters[i],num_filters[i]*2,kernel_size=3,stride=1,padding=0),
             nn.Conv2d(num_filters[i],
                       output_dim,
                       kernel_size=4,
-                      stride=1,
+                      stride=2,
                       padding=0,
-                      bias=False), nn.Sigmoid())
+                      bias=False), 
+            nn.Sigmoid())
 
     def forward(self, x):
         h = self.hidden_layer(x)
@@ -93,3 +95,14 @@ class DCGenerator(nn.Module):
         h = self.hidden_layer(x)
         out = self.output_layer(h)
         return out
+
+if __name__=='__main__':
+    d =DCDiscriminator(3,[64,128,256,512],1)
+    import torch
+    data = torch.rand((1,3,64,64))
+    rst = d(data)
+    print(rst.shape)
+    g = DCGenerator(100,[512,256,128,64],3)
+    n = torch.rand((1,100,1,1))
+    r = g(n)
+    print(r.shape)
