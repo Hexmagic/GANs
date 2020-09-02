@@ -103,8 +103,8 @@ def main():
     from tqdm import tqdm
     print("Starting Training Loop...")
     trainD = True
-    m = 4
-    n = 5
+    m = 3
+    n = 3
     last_d_loss = 0
     last_g_loss = 0
     for epoch in range(num_epochs):
