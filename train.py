@@ -103,10 +103,9 @@ def main():
     from tqdm import tqdm
     print("Starting Training Loop...")
     trainD = True
-    m = 3
-    n = 3
     last_d_loss = 0
     last_g_loss = 0
+    m=1,n=1
     for epoch in range(num_epochs):
         bar = tqdm(dataloader, dynamic_ncols=True)
         bar.set_description_str(f"Epoch{epoch}/{num_epochs}")
@@ -196,14 +195,6 @@ def main():
 
             # if (iters % 500 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
             # iters += 1
-        lg = np.mean(G_losses)
-        ld = np.mean(D_losses)
-        if lg > last_g_loss and n < 10:
-            n += 1
-        if ld > last_d_loss and m < 10:
-            m += 1
-        last_g_loss = lg
-        last_d_loss = ld
         fake_images = to_img(fake.cpu().data)
         save_image(fake_images,
                    './dc_img/fake_images-{}.png'.format(epoch + 1))
