@@ -91,8 +91,8 @@ def main():
 
     # loss and optimizer
     criterion = nn.BCELoss()
-    optimizerG = optim.RMSprop(G.parameters(), lr=1e-3)
-    optimizerD = optim.RMSprop(D.parameters(), lr=1e-3)
+    optimizerG = optim.RMSprop(G.parameters(), lr=1e-4)
+    optimizerD = optim.RMSprop(D.parameters(), lr=1e-4)
 
     # log
     img_list = []
@@ -198,8 +198,10 @@ def main():
             # iters += 1
         lg = np.mean(G_losses)
         ld = np.mean(D_losses)
-        if lg > last_g_loss:
+        if lg > last_g_loss and n < 10:
             n += 1
+        if ld > last_d_loss and m < 10:
+            m += 1
         last_g_loss = lg
         last_d_loss = ld
         fake_images = to_img(fake.cpu().data)
