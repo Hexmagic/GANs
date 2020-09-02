@@ -91,7 +91,7 @@ def main():
 
     # loss and optimizer
     criterion = nn.BCELoss()
-    optimizerG = optim.RMSprop(G.parameters(), lr=1e-4, weight_decay=1e-5)
+    optimizerG = optim.RMSprop(G.parameters(), lr=1e-3)
     optimizerD = optim.RMSprop(D.parameters(), lr=1e-3)
 
     # log
