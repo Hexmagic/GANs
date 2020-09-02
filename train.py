@@ -102,10 +102,6 @@ def main():
     # Train
     from tqdm import tqdm
     print("Starting Training Loop...")
-    trainD = True
-    last_d_loss = 0
-    last_g_loss = 0
-    m=1,n=1
     for epoch in range(num_epochs):
         bar = tqdm(dataloader, dynamic_ncols=True)
         bar.set_description_str(f"Epoch{epoch}/{num_epochs}")
