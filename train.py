@@ -50,7 +50,7 @@ def main():
     if not os.path.exists('dc_img'):
         os.mkdir('dc_img')
     # model
-    Gconfig = dict(input_dim=100,
+    Gconfig = dict(input_dim=1000,
                    output_dim=3,
                    num_filters=[512, 256, 128, 64])
 
@@ -110,82 +110,52 @@ def main():
         bar = tqdm(dataloader, dynamic_ncols=True)
         bar.set_description_str(f"Epoch{epoch}/{num_epochs}")
         i = 0
-        it = iter(bar)
-        while i < len(bar) - 5:
-            if trainD:
-                for j in range(m):
-                    try:
-                        data = next(it)
-                    except:
-                        break
-                    real = data[0].to(device)
-                    bs = real.size(0)
-                    label = torch.full((bs, ),
-                                       real_label,
-                                       device=device,
-                                       dtype=torch.float32)
-                    noise = torch.randn(bs,
-                                        Gconfig['input_dim'],
-                                        1,
-                                        1,
-                                        device=device)
-                    fake = G(noise)
-                    D.zero_grad()
+        
+        for i,data in enumerate(bar):
+        
+            real = data[0].to(device)
+            bs = real.size(0)
+            label = torch.full((bs, ),
+                                real_label,
+                                device=device,
+                                dtype=torch.float32)
+            noise = torch.randn(bs,
+                                Gconfig['input_dim'],
+                                1,
+                                1,
+                                device=device)
+            fake = G(noise)
+            D.zero_grad()
 
-                    # train D
-                    # Compute loss of true images, label is 1
+            # train D
+            # Compute loss of true images, label is 1
 
-                    output = D(real).view(-1)
-                    errD_real = criterion(output, label)
-                    errD_real.backward()
-                    D_x = output.mean().item()
+            output = D(real).view(-1)
+            errD_real = criterion(output, label)
+            errD_real.backward()
+            D_x = output.mean().item()
 
-                    # Compute loss of fake images, label is 0
+            # Compute loss of fake images, label is 0
 
-                    label.fill_(fake_label)
-                    output = D(fake.detach()).view(-1)
-                    errD_fake = criterion(output, label)
-                    errD_fake.backward()
+            label.fill_(fake_label)
+            output = D(fake.detach()).view(-1)
+            errD_fake = criterion(output, label)
+            errD_fake.backward()
 
-                    D_G_z1 = output.mean().item()
-                    errD = errD_fake + errD_real
-                    optimizerD.step()
-                    D_losses.append(errD.item())
-                    i += 1
-                trainD = False
-            else:
-                for j in range(n):
-                    # train G
-                    # The purpose of the generator is to make the generated picture more realistic
-                    # label is 1
-                    #if i%2==0:
-                    try:
-                        data = next(it)
-                    except:
-                        break
-                    real = data[0].to(device)
-                    bs = real.size(0)
-                    label = torch.full((bs, ),
-                                       real_label,
-                                       device=device,
-                                       dtype=torch.float32)
-                    noise = torch.randn(bs,
-                                        Gconfig['input_dim'],
-                                        1,
-                                        1,
-                                        device=device)
-                    fake = G(noise)
-                    G.zero_grad()
-                    label.fill_(real_label)
-                    output = D(fake).view(-1)
-                    errG = criterion(output, label)
-                    errG.backward()
+            D_G_z1 = output.mean().item()
+            errD = errD_fake + errD_real
+            optimizerD.step()
+            D_losses.append(errD.item())
+                    
+            G.zero_grad()
+            label.fill_(real_label)
+            output = D(fake).view(-1)
+            errG = criterion(output, label)
+            errG.backward()
 
-                    D_G_z2 = output.mean().item()
-                    optimizerG.step()
-                    G_losses.append(errG.item())
-                    i += 1
-                trainD = True
+            D_G_z2 = output.mean().item()
+            optimizerG.step()
+            G_losses.append(errG.item())                    
             if i % 20 == 0:
                 bar.set_postfix_str(
                     'LD: %.4f LG: %.4f D(x): %.4f' %
