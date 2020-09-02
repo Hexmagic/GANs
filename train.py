@@ -103,14 +103,18 @@ def main():
     from tqdm import tqdm
     print("Starting Training Loop...")
     trainD = True
+    m = 4
+    n = 5
+    last_d_loss = 0
+    last_g_loss = 0
     for epoch in range(num_epochs):
         bar = tqdm(dataloader, dynamic_ncols=True)
         bar.set_description_str(f"Epoch{epoch}/{num_epochs}")
-        i=0
+        i = 0
         it = iter(bar)
-        while i < len(bar)-5: 
+        while i < len(bar) - 5:
             if trainD:
-                for j in range(4):
+                for j in range(m):
                     try:
                         data = next(it)
                     except:
@@ -118,14 +122,14 @@ def main():
                     real = data[0].to(device)
                     bs = real.size(0)
                     label = torch.full((bs, ),
-                                    real_label,
-                                    device=device,
-                                    dtype=torch.float32)
+                                       real_label,
+                                       device=device,
+                                       dtype=torch.float32)
                     noise = torch.randn(bs,
-                                                Gconfig['input_dim'],
-                                                1,
-                                                1,
-                                                device=device)
+                                        Gconfig['input_dim'],
+                                        1,
+                                        1,
+                                        device=device)
                     fake = G(noise)
                     D.zero_grad()
 
@@ -138,7 +142,6 @@ def main():
                     D_x = output.mean().item()
 
                     # Compute loss of fake images, label is 0
-                    
 
                     label.fill_(fake_label)
                     output = D(fake.detach()).view(-1)
@@ -152,7 +155,7 @@ def main():
                     i += 1
                 trainD = False
             else:
-                for j in range(5):
+                for j in range(n):
                     # train G
                     # The purpose of the generator is to make the generated picture more realistic
                     # label is 1
@@ -164,14 +167,14 @@ def main():
                     real = data[0].to(device)
                     bs = real.size(0)
                     label = torch.full((bs, ),
-                                    real_label,
-                                    device=device,
-                                    dtype=torch.float32)
+                                       real_label,
+                                       device=device,
+                                       dtype=torch.float32)
                     noise = torch.randn(bs,
-                                                Gconfig['input_dim'],
-                                                1,
-                                                1,
-                                                device=device)
+                                        Gconfig['input_dim'],
+                                        1,
+                                        1,
+                                        device=device)
                     fake = G(noise)
                     G.zero_grad()
                     label.fill_(real_label)
@@ -182,19 +185,23 @@ def main():
                     D_G_z2 = output.mean().item()
                     optimizerG.step()
                     G_losses.append(errG.item())
-                    i+=1
-                trainD= True
+                    i += 1
+                trainD = True
             if i % 20 == 0:
                 bar.set_postfix_str(
                     'LD: %.4f LG: %.4f D(x): %.4f' %
                     (np.mean(D_losses), np.mean(G_losses), D_x))
 
             # Save Losses for plotting later
-           
-            
 
             # if (iters % 500 == 0) or ((epoch == num_epochs - 1) and (i == len(dataloader) - 1)):
             # iters += 1
+        lg = np.mean(G_losses)
+        ld = np.mean(D_losses)
+        if lg > last_g_loss:
+            n += 1
+        last_g_loss = lg
+        last_d_loss = ld
         fake_images = to_img(fake.cpu().data)
         save_image(fake_images,
                    './dc_img/fake_images-{}.png'.format(epoch + 1))
